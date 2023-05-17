@@ -1,6 +1,6 @@
 ﻿using System.CommandLine;
 
-namespace CSharpToDot;
+namespace CallGraphGenerator;
 
 class Program
 {

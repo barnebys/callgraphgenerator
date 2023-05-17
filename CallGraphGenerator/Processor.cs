@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.MSBuild;
 
-namespace CSharpToDot;
+namespace CallGraphGenerator;
 
 public class Processor : IDisposable
 {
