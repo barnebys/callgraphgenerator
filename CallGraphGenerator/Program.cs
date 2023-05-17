@@ -46,12 +46,25 @@ class Program
         rootCommand.SetHandler(async (file, ns, cs, mt, outputFile) =>
         {
             var writer = Console.Out;
-            if (outputFile != null)
-                writer = new StreamWriter(outputFile.FullName);
+            try
+            {
+                if (outputFile != null)
+                    writer = new StreamWriter(outputFile.FullName);
 
-            var processor = new Processor(writer);
-            await processor.OpenAsync(file.FullName);
-            await processor.RunAsync(ns, cs, mt);
+                var processor = new Processor(writer);
+                await processor.OpenAsync(file.FullName);
+                await processor.RunAsync(ns, cs, mt);
+
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                throw;
+            }
+            finally
+            {
+                writer.Close();
+            }
             
         }, fileArg, namespaceArg, classArg, methodArg, outputFileOption);
 
