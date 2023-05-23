@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -10,65 +11,54 @@ namespace CallGraphGenerator;
 public class Processor : IDisposable
 {
     private readonly MSBuildWorkspace _workspace;
-    private Solution? _solution = null;
-    private List<Project> _projects = new List<Project>();
+    private Solution? _solution;
+    private List<Project> _projects = new();
+    private readonly string _filename;
     private readonly TextWriter _writer;
-    private readonly Dictionary<SyntaxTree, Compilation> _compilations = new Dictionary<SyntaxTree, Compilation>();
-    private readonly ISet<string> _leafs = new HashSet<string>();
-    private readonly ISet<string> _ignores = new HashSet<string>();
+    private readonly ISet<string> _leafs;
+    private readonly ISet<string> _ignores;
+    private readonly Dictionary<SyntaxTree, Compilation> _compilations = new();
 
-    public Processor(TextWriter writer)
+    private readonly IList<string> _colors = new List<string>
+    {
+        "Pink",
+        "DarkSeaGreen",
+        "CornflowerBlue",
+        "PeachPuff",
+        "LightSeaGreen",
+        "Lavender",
+        "Salmon",
+        "Teal",
+        "Turquoise",
+    };
+
+    public Processor(TextWriter writer, string filename, IEnumerable<string> leafs, IEnumerable<string> ignores)
     {
         MSBuildLocator.RegisterDefaults();
         _workspace = MSBuildWorkspace.Create();
         _writer = writer;
-        _ignores.Add("QueryFilterBuilder");
-        _ignores.Add("Clock");
-        _ignores.Add("SettingService");
-        _ignores.Add("IAuthorizedUserService");
-        _ignores.Add("SystemSettingsService");
-        _ignores.Add("StreamExtensions");
-        _ignores.Add("EnumerableExtensions");
-        _ignores.Add("IOrderContext");
-        _ignores.Add("InvoiceDataService");
-        _ignores.Add("KeyValueSettingService");
-        _ignores.Add("MarginVatService");
-        _ignores.Add("InvoiceGeneratorFactory");
-        _ignores.Add("WinnerTrackingService");
-        _ignores.Add("CompanyService");
-        _ignores.Add("IInvoiceGenerator");
-        _ignores.Add("CustomerService");
-        _ignores.Add("InventoryDocumentService");
-        _ignores.Add("PaymentContext");
-        _ignores.Add("GenericRepository");
-        
-        _leafs.Add("EAccountingInvoicingService");
-        _leafs.Add("InvoiceSettingService");
-        _leafs.Add("InventoryDocumentService");
-        _leafs.Add("SmailService");
-        _leafs.Add("EUTaxCalculator");
-        _leafs.Add("AuctionService");
-        _leafs.Add("AuctionPaymentService");
-        _leafs.Add("InventoryItemService");
-        
+        _filename = filename;
+        _leafs = new HashSet<string>(leafs);
+        _ignores = new HashSet<string>(ignores);
     }
-    
-    public void Dispose()
+
+    void IDisposable.Dispose()
     {
         _workspace.Dispose();
     }
 
-    public async Task OpenAsync(string filepath)
+    private async Task OpenAsync()
     {
-        if (filepath.EndsWith("sln"))
+        Console.WriteLine($"Open file {_filename}...");
+        if (_filename.EndsWith("sln"))
         {
-            var solution = await _workspace.OpenSolutionAsync(filepath);
+            var solution = await _workspace.OpenSolutionAsync(_filename);
             _solution = solution;
             _projects.AddRange(solution.Projects);
         }
-        else if (filepath.EndsWith("csproj"))
+        else if (_filename.EndsWith("csproj"))
         {
-            var project = await _workspace.OpenProjectAsync(filepath);
+            var project = await _workspace.OpenProjectAsync(_filename);
             _projects.Add(project);
         }
         else
@@ -79,7 +69,9 @@ public class Processor : IDisposable
 
     public async Task RunAsync(string nameSpace, string className, string methodName)
     {
+        await OpenAsync();
         Console.WriteLine("Compiling...");
+        MethodDeclarationSyntax? method = null;
         foreach (var project in _projects)
         {
             Console.WriteLine($"Compiling project {project.Name}...");
@@ -89,17 +81,9 @@ public class Processor : IDisposable
             
             foreach (var syntaxTree in compilation.SyntaxTrees)
                 _compilations.Add(syntaxTree, compilation);
-        }
-
-
-        MethodDeclarationSyntax? method = null;
-        foreach (var project in _projects)
-        {
-            Console.WriteLine($"Fetching entry point...");
-            var compilation = await project.GetCompilationAsync();
-            method = GetEntry(compilation, nameSpace, className, methodName);
-            if (method != null)
-                break;
+            
+            if (method == null)
+                method = GetEntry(compilation, nameSpace, className, methodName);
         }
 
         if (method == null)
@@ -110,11 +94,12 @@ public class Processor : IDisposable
 
         Console.WriteLine($"Walking graph...");
         _writer.WriteLine("@startuml"); 
-        await WalkCallGraph(method, "entry");
+        _writer.WriteLine($"title {nameSpace}:{className}:{methodName}()");
+        await WalkCallGraph(method, "entry", 0);
         _writer.WriteLine("@enduml");
     }
 
-    private async Task WalkCallGraph(MethodDeclarationSyntax method, string caller)
+    private async Task WalkCallGraph(MethodDeclarationSyntax method, string caller, int depth)
     {
         if (_leafs.Contains(caller))
             return;
@@ -129,8 +114,10 @@ public class Processor : IDisposable
         
         if (_ignores.Contains(className))
             return;
-        
-        _writer.WriteLine($"{caller} -> {className}++: {methodName}");
+
+        var colorIndex = depth % _colors.Count;
+        var color = _colors[colorIndex];
+        _writer.WriteLine($"{caller} -> {className} ++ #{color}: {methodName}");
         var bodyInvocations = method.DescendantNodes()
             .OfType<InvocationExpressionSyntax>();
         var bodySymbols = bodyInvocations
@@ -159,7 +146,7 @@ public class Processor : IDisposable
 
             if (await bodySyntax.GetSyntaxAsync() is MethodDeclarationSyntax methodSyntax)
             {
-                await WalkCallGraph(methodSyntax, className);
+                await WalkCallGraph(methodSyntax, className, depth + 1);
             }
         }
         _writer.WriteLine("return");

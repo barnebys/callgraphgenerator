@@ -32,9 +32,21 @@ class Program
             description: "Method entry point"
         );
 
+        var leafOpt = new Option<List<string>>(
+            name: "--leaf",
+            description: "Classes that should not be parsed further.");
+        leafOpt.AddAlias("-l");
+        
+        var ignoreOpt = new Option<List<string>>(
+            name: "--ignore",
+            description: "Classes that should be completely ignored.");
+        ignoreOpt.AddAlias("-i");
+        
+
         var outputFileOption = new Option<FileInfo?>(
             name: "--output",
             description: "Optional output file");
+        outputFileOption.AddAlias("-o");
 
         var rootCommand = new RootCommand("PlantUml Call Grapher");
         rootCommand.AddArgument(fileArg);
@@ -42,8 +54,10 @@ class Program
         rootCommand.AddArgument(classArg);
         rootCommand.AddArgument(methodArg);
         rootCommand.AddOption(outputFileOption);
+        rootCommand.AddOption(leafOpt);
+        rootCommand.AddOption(ignoreOpt);
         
-        rootCommand.SetHandler(async (file, ns, cs, mt, outputFile) =>
+        rootCommand.SetHandler(async (file, ns, cs, mt, outputFile, leafs, ignores) =>
         {
             var writer = Console.Out;
             try
@@ -51,8 +65,7 @@ class Program
                 if (outputFile != null)
                     writer = new StreamWriter(outputFile.FullName);
 
-                var processor = new Processor(writer);
-                await processor.OpenAsync(file.FullName);
+                var processor = new Processor(writer, file.FullName, leafs, ignores);
                 await processor.RunAsync(ns, cs, mt);
 
             }
@@ -66,7 +79,7 @@ class Program
                 writer.Close();
             }
             
-        }, fileArg, namespaceArg, classArg, methodArg, outputFileOption);
+        }, fileArg, namespaceArg, classArg, methodArg, outputFileOption, leafOpt, ignoreOpt);
 
         return rootCommand;
     }
