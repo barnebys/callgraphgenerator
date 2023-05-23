@@ -18,6 +18,7 @@ public class Processor : IDisposable
     private readonly ISet<string> _leafs;
     private readonly ISet<string> _ignores;
     private readonly Dictionary<SyntaxTree, Compilation> _compilations = new();
+    private readonly ISet<MethodDeclarationSyntax> _callstack = new HashSet<MethodDeclarationSyntax>();
 
     private readonly IList<string> _colors = new List<string>
     {
@@ -115,6 +116,17 @@ public class Processor : IDisposable
         if (_ignores.Contains(className))
             return;
 
+
+        if (_callstack.Contains(method))
+        {
+            _writer.WriteLine($"{caller} ->o {className}: {methodName}");
+            Console.WriteLine($"Recursion: {caller} -> {className}: {methodName}");
+            return;
+        }
+        _callstack.Add(method);
+
+        
+        
         var colorIndex = depth % _colors.Count;
         var color = _colors[colorIndex];
         _writer.WriteLine($"{caller} -> {className} ++ #{color}: {methodName}");
@@ -150,6 +162,7 @@ public class Processor : IDisposable
             }
         }
         _writer.WriteLine("return");
+        _callstack.Remove(method);
     }
     
     private static TypeDeclarationSyntax? FindClassParent(MethodDeclarationSyntax method)
