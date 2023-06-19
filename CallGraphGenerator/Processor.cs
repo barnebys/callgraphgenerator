@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
@@ -12,7 +13,7 @@ public class Processor : IDisposable
 {
     private readonly MSBuildWorkspace _workspace;
     private Solution? _solution;
-    private List<Project> _projects = new();
+    private IImmutableSet<Project> _projects;
     private readonly string _filename;
     private readonly TextWriter _writer;
     private readonly ISet<string> _leafs;
@@ -55,12 +56,13 @@ public class Processor : IDisposable
         {
             var solution = await _workspace.OpenSolutionAsync(_filename);
             _solution = solution;
-            _projects.AddRange(solution.Projects);
+            _projects = solution.Projects.ToImmutableHashSet();
         }
         else if (_filename.EndsWith("csproj"))
         {
             var project = await _workspace.OpenProjectAsync(_filename);
-            _projects.Add(project);
+            _solution = project.Solution;
+            _projects = _solution.Projects.ToImmutableHashSet();
         }
         else
         {
@@ -138,7 +140,7 @@ public class Processor : IDisposable
 
         foreach (var bodySymbol in bodySymbols)
         {
-            var implementations = (await SymbolFinder.FindImplementationsAsync(bodySymbol, _solution)).ToList();
+            var implementations = (await SymbolFinder.FindImplementationsAsync(bodySymbol, _solution, _projects)).ToList();
             IList<SyntaxReference> declaringSyntax = null;
 
             if (implementations.Any())

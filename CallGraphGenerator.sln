@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CallGraphGenerator", "CallGraphGenerator\CallGraphGenerator.csproj", "{B39B0C3F-5D0C-4A2C-B961-A908231140CC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorld", "example\HelloWorld\HelloWorld\HelloWorld.csproj", "{F9554356-4BA3-4D79-B6EB-5F4FF65BB62C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{B39B0C3F-5D0C-4A2C-B961-A908231140CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B39B0C3F-5D0C-4A2C-B961-A908231140CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B39B0C3F-5D0C-4A2C-B961-A908231140CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9554356-4BA3-4D79-B6EB-5F4FF65BB62C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9554356-4BA3-4D79-B6EB-5F4FF65BB62C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9554356-4BA3-4D79-B6EB-5F4FF65BB62C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9554356-4BA3-4D79-B6EB-5F4FF65BB62C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
